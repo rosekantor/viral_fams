@@ -37,7 +37,7 @@ def getargs():
     parser.add_argument("-i", "--domain-table", help="")
     parser.add_argument("-l1", "--lin-thresh-table", help="")
     parser.add_argument("-l2", "--lin-host-table", help="")
-    # parser.add_argument("-m", "--contig-taxa-method", default="lca", help="Options: lca, majority, best-hit")
+    parser.add_argument("-t", "--hmmer-type", default="hmmscan", help="Options: hmmscan, hmmsearch")
     parser.add_argument("-f", "--fasta", help="")
     parser.add_argument("-o", "--outdir", help="")
     
@@ -62,11 +62,9 @@ def getargs():
     if not os.path.isfile(args.lin_host_table):
         print ("--{} {} must exist and not be empty\n".format('lin-host-table', args.lin_host_table))
         args_pass = False
-    '''
-    if args.contig_taxa_method not in ["lca", "majority", "best-hit"]:
-        print ("--{} must be a valid method option\n".format('contig-taxa-method'))
+    if args.hmmer_type not in ["hmmscan", "hmmsearch"]:
+        print ("--{} must be a valid option\n".format('hmmer-type'))
         args_pass = False
-    '''
 
     if args.fasta is None:
         print ("must specify --{}\n".format('fasta'))
@@ -91,70 +89,83 @@ def getargs():
 
 # read_domtble_to_df()
 #
-def read_domtble_to_df(filepath):
+def read_domtble_to_df(hmmer_type, filepath):
     hits = list()
 
+    if hmmer_type == "hmmscan":
+        type = "hmmscan3-domtab"
+    elif hmmer_type == "hmmsearch":
+        type = "hmmsearch3-domtab"
+
     with open(filepath, 'r') as file:
-        for qresult in SearchIO.parse(file, 'hmmscan3-domtab'):
+        for qresult in SearchIO.parse(file, type):
             for hit in qresult.hits:
                 for hsp in hit.hsps:
-                    query = qresult.id
-                    target = hit.id
+                    if hmmer_type == "hmmscan":
+                        gene = qresult.id
+                        fam = hit.id
+                    elif hmmer_type == "hmmsearch":
+                        gene = hit.id
+                        fam = qresult.id
                     bitscore = hsp.bitscore
                     evalue = hsp.evalue
                     env_start = hsp.env_start
                     env_end = hsp.env_end
 
-                    hits.append((query, target, bitscore, evalue, env_start, env_end))
+                    hits.append((gene, fam, bitscore, evalue, env_start, env_end))
 
-    return pd.DataFrame(hits, columns=["query name", "target name", "score", "evalue", "env start", "env end"])
+    return pd.DataFrame(hits, columns=["gene", "fam", "score", "evalue", "env start", "env end"])
 
 # read_lin_thresh_to_dict(filepath)
 #
 def read_lin_thresh_to_dict(filepath):
-    df = pd.read_csv(filepath, sep="\t", usecols=[0, 1], index_col=0)
-    
-    # use first thresh for each fam
-    first_df = df[~df.index.duplicated(keep='first')]
-    last_df = df[~df.index.duplicated(keep='last')]
+    df = pd.read_csv(filepath, sep="\t")
 
-    return {fam: info["BITSCORE_THRESH"] for fam, info in first_df.iterrows()}, {fam: info["BITSCORE_THRESH"] for fam, info in last_df.iterrows()}
+    highest_thresh_df = df.loc[df.groupby("FAM")["BITSCORE_THRESH"].idxmax()].set_index("FAM")
+    lowest_thresh_df = df.loc[df.groupby("FAM")["BITSCORE_THRESH"].idxmin()].set_index("FAM")
+
+    fam_highest_thresh_map = {fam: info["BITSCORE_THRESH"] for fam, info in highest_thresh_df.iterrows()}
+    fam_highest_tax_map = {fam: info["LINEAGE"] for fam, info in highest_thresh_df.iterrows()}
+
+    fam_lowest_thresh_map = {fam: info["BITSCORE_THRESH"] for fam, info in lowest_thresh_df.iterrows()}
+    fam_lowest_tax_map = {fam: info["LINEAGE"] for fam, info in lowest_thresh_df.iterrows()}
+
+    return fam_highest_thresh_map, fam_highest_tax_map, fam_lowest_thresh_map, fam_lowest_tax_map
 
 # filter_hit_table(domtbl_df, fam_thresh_map)
 #
-def filter_hit_table(domtbl_df, fam_thresh_map, invalid_outfile):
+def filter_hit_table(domtbl_df, fam_thresh_map, seq_map, no_hit_queries_outfile):
     query_fam_map = dict()
     query_bitscore_map = dict()
     query_coords_map = defaultdict(lambda: {"env start": 0, "env end": 0})
-    target_not_found_list = list()
-    evalue_thresh = 0.001
+    # evalue_thresh = 0.001
 
-    query_grouped_tbl_df = domtbl_df.groupby("query name")
+    unseen_queries = set()
+
+    query_grouped_tbl_df = domtbl_df.groupby("gene")
     for query, df in query_grouped_tbl_df:
-        target_found = False
-        df.sort_values(by="score", ascending=False)
+        df.sort_values(by="score", ascending=False) # get highest bitscore fam
         for i, info in df.iterrows():
-            target = info["target name"]
+            target = info["fam"]
             bitscore = info["score"]
             evalue = info["evalue"]
             env_start = info["env start"]   # Note: this automatically subtracts one from raw data
             env_end = info["env end"]
-            if evalue < evalue_thresh and target in fam_thresh_map.keys():
+
+            #if evalue < evalue_thresh
+            if target in fam_thresh_map.keys():
                 if bitscore > fam_thresh_map[target]:
                     query_fam_map[query] = target
                     query_bitscore_map[query] = bitscore
                     query_coords_map[query]["env start"] = env_start
                     query_coords_map[query]["env end"] = env_end
 
-                    target_found = True
+                    unseen_queries.add(query)
                     break
-        
-        if not target_found:
-            target_not_found_list.append(query)
     
-    with open(invalid_outfile, "w") as outfile:
-        for invalid_query in target_not_found_list:
-            outfile.write(f"{invalid_query}\n")
+    with open(no_hit_queries_outfile, "w") as outfile:
+        for query in unseen_queries:
+            outfile.write(f"{query}\n")
     
     return query_fam_map, query_bitscore_map, query_coords_map
 
@@ -165,7 +176,7 @@ def read_lin_hosts_to_dicts(filepath):
     df["bacteria+phage"] = df["bacteria"] + df["phage"]
     df.drop(["bacteria", "phage"], axis=1, inplace=True)
 
-    taxonomy_map = {fam: row["HITS_LCA_NODE"] for fam, row in df.iterrows()}
+    # taxonomy_map = {fam: row["HITS_LCA_NODE"] for fam, row in df.iterrows()}
     
     hosts = df.columns[2:]
     host_count_map = defaultdict(lambda: {host: 0 for host in hosts})
@@ -173,7 +184,7 @@ def read_lin_hosts_to_dicts(filepath):
         for host in hosts:
             host_count_map[fam][host] += row[host]
 
-    return taxonomy_map, host_count_map
+    return host_count_map
 
 # connect_query_to_fam_map(query_hits_map, fam_info_map)
 #
@@ -202,7 +213,8 @@ def write_query_info_to_tsv(outfile, query_fam_map, query_bitscore_map, query_ta
 # get_contig_id(query_name)
 #
 def get_contig_id(query_name):
-    return "_".join(query_name.split("_")[:-1])
+    # return "_".join(query_name.split("_")[:-1])
+    return query_name.split("~")[0]
 
 # find_lca_taxa(all_taxa)
 #
@@ -395,12 +407,28 @@ def write_dict_to_fasta(filepath, seq_map):
             file.write(f">{name}\n")
             file.write(f"{seq}\n")
 
-# create_fam_fastas(outdir, fasta_filepath, query_fam_map, query_coords_map)
+# write_fam_coords(fam_coords_outfile, contig_queries_map, query_coords_map, query_fam_map)
 #
-def create_fam_fastas(outdir, fasta_filepath, query_fam_map, query_coords_map):
-    seq_map = read_fasta_to_dict(fasta_filepath)
-    seq_map = {name.split(" ")[0]: seq for name, seq in seq_map.items()}  # rename keys because hmmscan changes sequence names
-    
+def write_fam_coords(fam_coords_outfile, contig_queries_map, query_coords_map, query_fam_map):
+    out_info = list()
+    for contig, queries in contig_queries_map.items():
+        for query in queries:
+            out_info.append((contig, query, query_fam_map[query], query_coords_map[query]["env start"], query_coords_map[query]["env end"]))
+
+    pd.DataFrame(out_info, columns=["contig", "query", "fam", "start", "stop"]).to_csv(fam_coords_outfile, sep="\t", index=False)
+
+# write_fam_sets(contig_fams_outfile, contig_queries_map, query_fam_map))
+#
+def write_fam_sets(contig_fams_outfile, contig_queries_map, query_fam_map):
+    with open(contig_fams_outfile, "w") as file:
+        for contig, queries in contig_queries_map.items():
+            for query in queries:
+                file.write(f"{contig}\t{query}\t{query_fam_map[query]}")
+                file.write(f"\n")
+
+# create_fam_fastas(outdir, seq_map, query_fam_map, query_coords_map)
+#
+def create_fam_fastas(outdir, seq_map, query_fam_map, query_coords_map):
     sliced_query_name_map = dict()
     fam_query_map = defaultdict(list)
     for query, fam in query_fam_map.items():
@@ -515,26 +543,33 @@ def make_dir(path):
 def main() -> int:
     args = getargs()
 
-    domtbl_df = read_domtble_to_df(args.domain_table)
+    domtbl_df = read_domtble_to_df(args.hmmer_type, args.domain_table)
     # domtbl_df.to_csv("/p/lustre1/golez1/tmp_hmm_hits.tsv", sep="\t", index=False)
     # domtbl_df = pd.read_csv("/p/lustre1/golez1/hmm_hits.tsv", sep="\t")
-    fam_first_thresh_map, fam_last_thresh_map = read_lin_thresh_to_dict(args.lin_thresh_table)
-    fam_taxa_map, fam_host_count_map = read_lin_hosts_to_dicts(args.lin_host_table)
+    fam_highest_thresh_map, fam_highest_tax_map, fam_lowest_thresh_map, fam_lowest_tax_map = read_lin_thresh_to_dict(args.lin_thresh_table)
+    fam_host_count_map = read_lin_hosts_to_dicts(args.lin_host_table)
 
-    fam_taxa_sum_outfile = os.path.join(args.outdir, "fam_taxa_summary.txt")
-    fam_taxa_classification_outfile = os.path.join(args.outdir, "fam_taxa_classification.tsv")
-    fam_taxa_sum_map, taxa_fams_map = create_taxa_summary(fam_taxa_sum_outfile, fam_taxa_classification_outfile, fam_taxa_map)
+    seq_map = read_fasta_to_dict(args.fasta)
+    seq_map = {name.split(" ")[0]: seq for name, seq in seq_map.items()}  # rename keys because hmmscan changes sequence names
 
-    for which_thresh in ["first", "second"]:
+    for which_thresh in ["highest", "lowest"]:
         thresh_outdir = os.path.join(args.outdir, f"{which_thresh}_bitscore_thresh")
         make_dir(thresh_outdir)
 
-        invalid_queries_outfile = os.path.join(thresh_outdir, "invalid_queries.txt")
-        if which_thresh == "first":
-            query_fam_map, query_bitscore_map, query_coords_map = filter_hit_table(domtbl_df, fam_first_thresh_map, invalid_queries_outfile)
-        elif which_thresh == "second":
-            query_fam_map, query_bitscore_map, query_coords_map = filter_hit_table(domtbl_df, fam_last_thresh_map, invalid_queries_outfile)
-        query_taxa_map = connect_query_to_fam_map(query_fam_map, fam_taxa_map)
+        fam_taxa_sum_outfile = os.path.join(thresh_outdir, "fam_taxa_summary.txt")
+        fam_taxa_classification_outfile = os.path.join(thresh_outdir, "fam_taxa_classification.tsv")
+        no_hit_queries_outfile = os.path.join(thresh_outdir, "no_hit_queries.txt")
+        
+        if which_thresh == "highest":
+            thresh_map = fam_highest_thresh_map
+            tax_map = fam_highest_tax_map
+        elif which_thresh == "lowest":
+            thresh_map = fam_lowest_thresh_map
+            tax_map = fam_lowest_tax_map
+
+        fam_taxa_sum_map, taxa_fams_map = create_taxa_summary(fam_taxa_sum_outfile, fam_taxa_classification_outfile, tax_map)
+        query_fam_map, query_bitscore_map, query_coords_map = filter_hit_table(domtbl_df, thresh_map, seq_map, no_hit_queries_outfile)
+        query_taxa_map = connect_query_to_fam_map(query_fam_map, tax_map)
         query_hosts_map = connect_query_to_fam_map(query_fam_map, fam_host_count_map)
 
         query_info_outfile = os.path.join(thresh_outdir, "query_fam_lineage_host_info.tsv")
@@ -564,12 +599,18 @@ def main() -> int:
         contig_host_sum_outfile = os.path.join(thresh_outdir, "contig_host_summary.txt")
         contig_host_map = create_host_summary(contig_host_sum_outfile, contig_queries_map, query_hosts_map)
 
+        # fam_coords_outfile = os.path.join(thresh_outdir, "fam_coords.tsv")
+        # write_fam_coords(fam_coords_outfile, contig_queries_map, query_coords_map, query_fam_map)
+        
+        contig_fams_outfile = os.path.join(thresh_outdir, "contig_fams.tsv")
+        write_fam_sets(contig_fams_outfile, contig_queries_map, query_fam_map)
+
         fastas_outdir = os.path.join(thresh_outdir, "sequences")
         make_dir(fastas_outdir)
-        sliced_query_name_map = create_fam_fastas(fastas_outdir, args.fasta, query_fam_map, query_coords_map)
+        sliced_query_name_map = create_fam_fastas(fastas_outdir, seq_map, query_fam_map, query_coords_map)
 
-        bitscore_map_outdir = os.path.join(thresh_outdir, "bitscore_map.tsv")
-        write_query_bitscore_map(bitscore_map_outdir, sliced_query_name_map, query_bitscore_map)
+        bitscore_map_outfile = os.path.join(thresh_outdir, "bitscore_map.tsv")
+        write_query_bitscore_map(bitscore_map_outfile, sliced_query_name_map, query_bitscore_map)
 
         contig_confidence_map = get_contig_confidence_score(contig_queries_map, query_bitscore_map)
 

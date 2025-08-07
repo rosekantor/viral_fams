@@ -158,7 +158,7 @@ def calc_fam_bitscore_threshold_per_lineage_node (fam_genome_hits_info,
         common_lineage = []
         for genome_id in fam_genome_hits_info[fam_id].keys():
             this_lineage = genome_info[genome_id]['v_lineage'].split('; ')
-            if not common_lineage:
+            if not common_lineage: 
                 common_lineage.extend(this_lineage)
                 continue
             new_common_lineage = []
@@ -191,7 +191,10 @@ def calc_fam_bitscore_threshold_per_lineage_node (fam_genome_hits_info,
 
                 parent_node = fam_bs_vals_per_lineage_node[fam_id][fam_lca]
                 if child_start_i < len(this_lineage):
-                    for taxon in this_lineage[child_start_i:]:
+                    prev_taxon = ""
+                    for next_taxon in this_lineage[child_start_i:]:
+                        taxon = prev_taxon + "; " + next_taxon if prev_taxon else next_taxon
+
                         if 'child' not in parent_node:
                             parent_node['child'] = dict()
                         if taxon not in parent_node['child']:
@@ -199,6 +202,8 @@ def calc_fam_bitscore_threshold_per_lineage_node (fam_genome_hits_info,
                             parent_node['child'][taxon]['vals'] = []
                         parent_node['child'][taxon]['vals'].append(dom_bitscore)
                         parent_node = parent_node['child'][taxon] 
+
+                        prev_taxon = taxon
                     
         # reduce scores to lowest per node and trim to main trunk
         this_fam_bs_per_lineage_node = min_val_bs_lineage (fam_bs_vals_per_lineage_node[fam_id][fam_lca])
@@ -278,8 +283,8 @@ def write_fam_bitscore_thresh_per_node (outtsvfile, fam_bs_thresh_per_node):
         this_node = fam_bs_thresh_per_node[fam_id][taxon]
 
         bit_score = this_node['val']
-        tax_string = taxon
-        row = [fam_id, str(bit_score), tax_string]
+        base_tax_string = taxon
+        row = [fam_id, str(bit_score), base_tax_string]
         #print ("\t".join(row), flush=True)  # DEBUG
         outbuf.append("\t".join(row))
 
@@ -290,7 +295,7 @@ def write_fam_bitscore_thresh_per_node (outtsvfile, fam_bs_thresh_per_node):
             taxon = list(this_node['child'].keys())[0]
             bit_score = this_node['child'][taxon]['val']
             if bit_score != last_bit_score:
-                tax_string = tax_string+'; '+taxon
+                tax_string = base_tax_string + '; ' + taxon
                 row = [fam_id, str(bit_score), tax_string]
                 outbuf.append("\t".join(row))
                 #print ("\t".join(row), flush=True)  # DEBUG
