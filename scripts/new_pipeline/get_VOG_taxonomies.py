@@ -1,5 +1,8 @@
 #!/usr/bin/python3
 
+# This script isn't needed because VOGDB has a lca file
+
+
 import sys
 import os
 import argparse

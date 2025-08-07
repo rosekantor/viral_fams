@@ -9,6 +9,7 @@ from Bio import SearchIO
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import matplotlib.pyplot as plt
 
 
 # getargs()
@@ -20,6 +21,7 @@ def getargs():
     parser.add_argument("-m", "--hmmer-method", default="hmmscan", help="Options: hmmscan, hmmsearch")
     parser.add_argument("-c", "--tc-map", help="")
     parser.add_argument("-t", "--fam-tax-map", help="")
+    parser.add_argument("-s", "--fam-host-file", help="")
     parser.add_argument("-o", "--outdir", help="")
     
     args = parser.parse_args()
@@ -54,6 +56,15 @@ def getargs():
          not os.path.isfile(args.fam_tax_map) or \
          not os.path.getsize(args.fam_tax_map) > 0:
         print ("--{} {} must exist and not be empty\n".format('fam-tax-map', args.fam_tax_map))
+        args_pass = False
+
+    if args.fam_host_file is None:
+        print ("must specify --{}\n".format('fam-host-file'))
+        args_pass = False
+    elif not os.path.exists(args.fam_host_file) or \
+         not os.path.isfile(args.fam_host_file) or \
+         not os.path.getsize(args.fam_host_file) > 0:
+        print ("--{} {} must exist and not be empty\n".format('fam-host-file', args.fam_host_file))
         args_pass = False
 
     if args.outdir is None:
@@ -148,10 +159,17 @@ def read_tc_map(filepath):
     return map
 
 
+# read_fam_host_file()
+#
+def read_fam_host_file(filepath):
+    df = pd.read_csv(filepath, sep="\t", usecols=["Group", "Best Host"], keep_default_na=False)
+    return dict(zip(df["Group"], df["Best Host"]))
+
+
 # assign_gene_taxonomy()
 #
-def assign_gene_taxonomy(domtbl_df, tc_map, fam_tax_map):
-    gene_tax_map = dict()
+def assign_gene_taxonomy(domtbl_df, tc_map):
+    gene_fam_map = dict()
     gene_bitscore_map = dict()
 
     gene_grouped_tbl_df = domtbl_df.groupby("gene")
@@ -165,11 +183,11 @@ def assign_gene_taxonomy(domtbl_df, tc_map, fam_tax_map):
             # env_end = info["env end"]
 
             if bitscore >= tc_map[fam]:
-                gene_tax_map[gene] = fam_tax_map[fam]
+                gene_fam_map[gene] = fam
                 gene_bitscore_map[gene] = bitscore
                 break
     
-    return gene_tax_map, gene_bitscore_map
+    return gene_fam_map, gene_bitscore_map
 
 
 # write_gene_tax_to_file()
@@ -181,10 +199,11 @@ def write_gene_tax_to_file(tax_out, tax_map, bitscore_map):
 
 # write_contig_tax_to_file()
 #
-def write_contig_tax_to_file(tax_out, tax_map):
+def write_contig_tax_to_file(tax_out, tax_map, host_map):
     with open(tax_out, "w") as file:
-        for gene, tax in tax_map.items():
-            file.write(f"{gene}\t{tax}\n")
+        file.write("Genome\tTaxonomy\tHost\n")
+        for genome, tax in tax_map.items():
+            file.write(f"{genome}\t{tax}\t{host_map[genome]}\n")
 
 
 # get_contig_id()
@@ -203,6 +222,47 @@ def get_contigs(queries):
         contig_all_queries_map[contig_id].append(query)
     
     return contig_all_queries_map
+
+
+# get_contig_host_counts()
+#
+def get_contig_host_counts(contig_prots_map, gene_fam_map, fam_host_map):
+    contig_host_counts = defaultdict(lambda: defaultdict(int))
+    for contig, prots in contig_prots_map.items():
+        for prot in prots:
+            fam = gene_fam_map[prot]
+            best_fam_host = fam_host_map[fam]
+
+            contig_host_counts[contig][best_fam_host] += 1
+    
+    contig_host_map = dict()
+    for contig, host_counts in contig_host_counts.items():
+        contig_host_map[contig] = max(host_counts, key=host_counts.get)
+
+    return contig_host_counts, contig_host_map
+
+
+# write_contig_host_counts()
+#
+def write_contig_host_counts(outfile, contig_host_counts, contig_host_map):
+    all_hosts = sorted(list(set(host for host_counts in contig_host_counts.values() for host in host_counts.keys())))
+
+    with open(outfile, "w") as file:
+        file.write("Contig\tBest Host")
+        for host in all_hosts:
+            file.write(f"\t{host}")
+        file.write("\n")
+
+        for contig, host_counts in contig_host_counts.items():
+            best_host = contig_host_map[contig]
+
+            file.write(f"{contig}\t{best_host}")
+            for host in all_hosts:
+                if host in host_counts.keys():
+                    file.write(f"\t{host_counts[host]}")
+                else:
+                    file.write(f"\t{0}")
+            file.write("\n")
 
 
 # get_greatest_keys()
@@ -328,18 +388,27 @@ def main() -> int:
 
     tc_map = read_tc_map(args.tc_map)
 
-    gene_tax_map, gene_bitscore_map = assign_gene_taxonomy(domtbl_df, tc_map, fam_tax_map)
+    fam_host_map = read_fam_host_file(args.fam_host_file)
+
+    gene_fam_map, gene_bitscore_map = assign_gene_taxonomy(domtbl_df, tc_map)
+
+    gene_tax_map = {gene: fam_tax_map[fam] for gene, fam in gene_fam_map.items()}
 
     gene_tax_outfile = os.path.join(args.outdir, "gene_tax_assignment.tsv")
     write_gene_tax_to_file(gene_tax_outfile, gene_tax_map, gene_bitscore_map)
 
     contig_prots_map = get_contigs(list(gene_tax_map.keys()))
 
+    contig_host_counts, contig_host_map = get_contig_host_counts(contig_prots_map, gene_fam_map, fam_host_map)
+
+    contig_host_counts_outfile = os.path.join(args.outdir, "contig_host_counts.tsv")
+    write_contig_host_counts(contig_host_counts_outfile, contig_host_counts, contig_host_map)
+
     for method in ["top", "majority", "lca"]:
         contig_tax_map = assign_contig_taxonomy(contig_prots_map, gene_tax_map, gene_bitscore_map, method)
 
-        contig_tax_outfile = os.path.join(args.outdir, f"{method}_contig_tax_assignment.tsv")
-        write_contig_tax_to_file(contig_tax_outfile, contig_tax_map)
+        contig_tax_outfile = os.path.join(args.outdir, f"{method}_contig_predictions.tsv")
+        write_contig_tax_to_file(contig_tax_outfile, contig_tax_map, contig_host_map)
 
     return 0
 

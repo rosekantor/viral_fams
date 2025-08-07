@@ -180,35 +180,35 @@ def read_dict(filepath):
     return map
 
 
-def get_fam_species_counts(fam_members_map, gene_species_map, species_host_map):
-    fam_species_counts = defaultdict(lambda: defaultdict(int))
+def get_fam_host_counts(fam_members_map, gene_species_map, species_host_map):
+    fam_host_counts = defaultdict(lambda: defaultdict(int))
 
     for fam, members in fam_members_map.items():
         for member in members:
             species = gene_species_map[member]
             host = species_host_map[species]
 
-            fam_species_counts[fam][host] += 1
+            fam_host_counts[fam][host] += 1
 
-    return fam_species_counts
+    return fam_host_counts
 
 
-def write_fam_species_host_counts(outfile, fam_species_counts):
-    all_species = sorted(list(set(species for species_map in fam_species_counts.values() for species in species_map.keys())))
+def write_fam_species_host_counts(outfile, fam_host_counts):
+    all_hosts = sorted(list(set(host for host_counts in fam_host_counts.values() for host in host_counts.keys())))
 
     with open(outfile, "w") as file:
-        file.write("Group\tBest Species")
-        for species in all_species:
-            file.write(f"\t{species}")
+        file.write("Group\tBest Host")
+        for host in all_hosts:
+            file.write(f"\t{host}")
         file.write("\n")
 
-        for fam, species_counts in fam_species_counts.items():
-            best_host = max(species_counts, key=species_counts.get)
+        for fam, host_counts in fam_host_counts.items():
+            best_host = max(host_counts, key=host_counts.get)
 
             file.write(f"{fam}\t{best_host}")
-            for species in all_species:
-                if species in species_counts.keys():
-                    file.write(f"\t{species_counts[species]}")
+            for host in all_hosts:
+                if host in host_counts.keys():
+                    file.write(f"\t{host_counts[host]}")
                 else:
                     file.write(f"\t{0}")
             file.write("\n")
@@ -227,10 +227,10 @@ def main():
     # write_dict_to_file("/p/lustre1/golez1/vogdb_231_species_host_map.tsv", species_host_map)
     species_host_map = read_dict("/p/lustre1/golez1/vogdb_231_species_host_map.tsv")
     
-    fam_species_counts = get_fam_species_counts(fam_members_map, gene_species_map, species_host_map)
+    fam_host_counts = get_fam_host_counts(fam_members_map, gene_species_map, species_host_map)
 
-    fam_species_counts_outfile = os.path.join(args.outdir, "fam_species_counts.tsv")
-    write_fam_species_host_counts(fam_species_counts_outfile, fam_species_counts)
+    fam_host_counts_outfile = os.path.join(args.outdir, "fam_host_counts.tsv")
+    write_fam_species_host_counts(fam_host_counts_outfile, fam_host_counts)
 
     return 0
 
