@@ -1,5 +1,4 @@
 # download genome files from genbank ftp server
-# TODO: add argparse
 
 import sys
 import os

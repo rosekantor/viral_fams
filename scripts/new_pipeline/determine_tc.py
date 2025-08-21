@@ -96,7 +96,7 @@ def determine_fam_tcs(hit_bitscores, fam_prot_ids):
     fam_tc_map = dict()
     
     for fam, prot_ids in fam_prot_ids.items():
-        all_bitscores = list()
+        all_bitscores = [0]
         for prot in prot_ids:
             if prot in hit_bitscores[fam].keys():
                 all_bitscores += hit_bitscores[fam][prot]
