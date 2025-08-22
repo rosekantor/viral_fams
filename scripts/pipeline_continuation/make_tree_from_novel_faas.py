@@ -20,13 +20,13 @@ FASTTREE_bin = "FastTree"
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="make trees from sequences for fam hits")
+    parser = argparse.ArgumentParser(description="make trees from sequences for novel fam hits, includes ICTV fam hits")
 
-    parser.add_argument("-d", "--datadir", help="")
-    parser.add_argument("-r", "--ref-seq-dir", help="")
+    parser.add_argument("-d", "--datadir", help="Output directory of novel sequences mapped to each FAM from parse_hmmscan_table.py")
+    parser.add_argument("-r", "--ref-seq-dir", help="Output directory of ICTV sequences mapped to each FAM from get_ref_seqs_architecture-ICTV.py")
     parser.add_argument("-c", "--coverage", default=0.5, type=float, help="fraction of overlap region required covered [0.0,1.0] (def: 0.5)")
-    parser.add_argument("-b", "--bitscore-map", help="")
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("-b", "--bitscore-map", help="Bitscore map output from parse_hmmscan_table.py")
+    parser.add_argument("-o", "--outdir", help="Directory to output files")
     
     args = parser.parse_args()
     args_pass = True

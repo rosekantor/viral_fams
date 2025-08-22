@@ -9,7 +9,7 @@ from Bio import SeqIO
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Get taxonomies from ICTV genomes")
 
     parser.add_argument("-g", "--genomes-dir", help="genome sequences dir")
     parser.add_argument("-o", "--outfile", help="output")

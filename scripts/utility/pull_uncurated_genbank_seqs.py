@@ -12,10 +12,10 @@ import argparse
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="make trees from sequences for fam hits")
+    parser = argparse.ArgumentParser(description="Download a subset of species from genbank that are not in RefSeq")
 
-    parser.add_argument("-n", "--num-species", type=int, help="")
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("-n", "--num-species", type=int, help="Number of species to pull")
+    parser.add_argument("-o", "--outdir", help="Output directory")
     
     args = parser.parse_args()
     args_pass = True

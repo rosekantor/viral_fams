@@ -29,12 +29,12 @@ ORDERED_TAXA_RANKS = ["Domain", "Realm", "Kingdom", "Phylum", "Subphylum", "Clas
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Create novel table that will be inputted into ML model.")
 
-    parser.add_argument("-i", "--domain-table", help="")
+    parser.add_argument("-i", "--domain-table", help="domtblout output from hmmscan/hmmsearch")
     parser.add_argument("-m", "--hmmer-method", default="hmmscan", help="Options: hmmscan, hmmsearch")
-    parser.add_argument("-c", "--tc-map", help="")
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("-c", "--tc-map", help="trusted cutoff map from determine_tc.py")
+    parser.add_argument("-o", "--outdir", help="output directory")
     
     args = parser.parse_args()
     args_pass = True

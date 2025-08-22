@@ -9,12 +9,12 @@ from collections import defaultdict
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Determine trusted cutoffs for VOGDB hmms")
 
-    parser.add_argument("-i", "--domain-table", help="")
+    parser.add_argument("-i", "--domain-table", help="domtblout output from hmmscan/hmmsearch over ICTV sequences")
     parser.add_argument("-m", "--hmmer-method", default="hmmscan", help="Options: hmmscan, hmmsearch")
-    parser.add_argument("-f", "--fam-members-file", help="")
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("-f", "--fam-members-file", help="genes contained in each group from VOGDB")
+    parser.add_argument("-o", "--outdir", help="Output directory")
     
     args = parser.parse_args()
     args_pass = True

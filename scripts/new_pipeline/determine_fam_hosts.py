@@ -12,12 +12,12 @@ from bs4 import BeautifulSoup
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Get host information for each fam in VOGDB by webscrabing ncbi taxonomy browser/")
 
-    parser.add_argument("-m", "--members-file", help="")
-    parser.add_argument("-f", "--faa-file", help="")
-    parser.add_argument("-s", "--species-file", help="")
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("-m", "--members-file", help="genes contained in each group from VOGDB")
+    parser.add_argument("-f", "--faa-file", help="sequences from VOGDB")
+    parser.add_argument("-s", "--species-file", help="species information from VOGDB")
+    parser.add_argument("-o", "--outdir", help="Output directory")
     
     args = parser.parse_args()
     args_pass = True

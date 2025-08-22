@@ -9,14 +9,14 @@ import subprocess
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Executes hmmsearch as multiple jobs.")
 
-    parser.add_argument("-f", "--faa", help="")
-    parser.add_argument("-p", "--hmm", help="")
-    parser.add_argument("-b", "--basename", help="")
-    parser.add_argument("-n", "--nodes", type=int, default=1, help="")
+    parser.add_argument("-f", "--faa", help="Input faa file")
+    parser.add_argument("-p", "--hmm", help="Input hmm file")
+    parser.add_argument("-b", "--basename", help="base filename to use for output files")
+    parser.add_argument("-n", "--nodes", type=int, default=1, help="Number of nodes to create jobs for")
     parser.add_argument("-c", "--cpus", type=int, default=100, help="")
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("-o", "--outdir", help="Output directory")
     
     args = parser.parse_args()
     args_pass = True

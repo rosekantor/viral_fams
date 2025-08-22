@@ -20,11 +20,11 @@ from collections import defaultdict
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Get fam annotations from faa file")
 
-    parser.add_argument("-i", "--in-sequence-dir", help="")
-    parser.add_argument("-s", "--suffix", type=str, help="")
-    parser.add_argument("-o", "--outfile", help="")
+    parser.add_argument("-i", "--in-sequence-dir", help="Directory of ICTV sequences mapped to each FAM")
+    parser.add_argument("-s", "--suffix", type=str, help="Suffix of faa files (ex. '-sliced.faa')")
+    parser.add_argument("-o", "--outfile", help="Directory to output files")
     
     args = parser.parse_args()
     args_pass = True

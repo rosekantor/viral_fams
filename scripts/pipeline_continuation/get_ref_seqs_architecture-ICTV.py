@@ -17,6 +17,8 @@ import random
 import concurrent.futures
 import time
 
+# Note: I was working on implementing multiprocessing and I think it works, but I never got back to it
+
 RANK_SUFFIX_MAP = {
     "Domain": ["Viruses"],
     "Realm": ["viria"],
@@ -37,13 +39,13 @@ ORDERED_TAXA_RANKS = ["Domain", "Realm", "Kingdom", "Phylum", "Subphylum", "Clas
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Get ICTV sequences for each fam and genome architecture/fam hits.")
 
-    parser.add_argument("-l", "--lin-hits-table", help="")
-    parser.add_argument("-d", "--db-name", help="")
+    parser.add_argument("-l", "--lin-hits-table", help="output from get_vFAM_lineage_and_host_range.py using the same HMM db")
+    parser.add_argument("-d", "--db-name", help="name of HMM db used (used to filter domtbl filenames from --hmm-hits-dir)")
     parser.add_argument("-a", "--hmm-hits-dir", help="genome hits dir")
     parser.add_argument("-g", "--genomes-dir", help="genome sequences dir")
-    parser.add_argument("-c", "--cpus", type=int, default=1, help="")
+    parser.add_argument("-c", "--cpus", type=int, default=1, help="Number of cpus to use for multiprocessing")
     parser.add_argument("-o", "--outdir", help="output dir")
     
     args = parser.parse_args()
@@ -693,7 +695,7 @@ def main() -> int:
 
     fastas_outdir = os.path.join(args.outdir, "sequences")
     make_dir(fastas_outdir)
-    # write_fam_sequences_to_faa(fastas_outdir, fam_seq_map, tax_map)
+    write_fam_sequences_to_faa(fastas_outdir, fam_seq_map, tax_map)
 
     prot_fam_coords = filter_lower_fams(prot_bitscores, prot_fam_coords)
 

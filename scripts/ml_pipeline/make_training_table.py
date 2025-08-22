@@ -29,15 +29,15 @@ ORDERED_TAXA_RANKS = ["Domain", "Realm", "Kingdom", "Phylum", "Subphylum", "Clas
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Create test and training tables to be used for ml model.")
 
-    parser.add_argument("-i", "--domain-table", help="")
+    parser.add_argument("-i", "--domain-table", help="domtblout output from hmmscan/hmmsearch")
     parser.add_argument("-m", "--hmmer-method", default="hmmscan", help="Options: hmmscan, hmmsearch")
-    parser.add_argument("-c", "--tc-map", help="")
-    parser.add_argument("-t", "--taxonomy-table", help="")
+    parser.add_argument("-c", "--tc-map", help="trusted cutoff map from determine_tc.py")
+    parser.add_argument("-t", "--taxonomy-table", help="table that contains taxonomy of each gene from download_ICTV.ipynb")
     parser.add_argument("-n", "--nrows", type=int, default=None, required=False, help="Number of rows to randomly sampled. If none, all rows will be included.")
-    parser.add_argument("--test-size", type=float, default=0, required=False)
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("--test-size", type=float, default=0, required=False, help="Proportion of rows that will be in the test dataset")
+    parser.add_argument("-o", "--outdir", help="Output directory")
     
     args = parser.parse_args()
     args_pass = True

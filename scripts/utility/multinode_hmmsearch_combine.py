@@ -10,10 +10,10 @@ import pandas as pd
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Combines all finished hmmsearch jobs")
 
-    parser.add_argument("-e", "--execute-dir", help="")
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("-e", "--execute-dir", help="Output directory frommultinode_hmmsearch_execute.py")
+    parser.add_argument("-o", "--outdir", help="Output directory")
     
     args = parser.parse_args()
     args_pass = True

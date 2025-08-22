@@ -29,15 +29,15 @@ ORDERED_TAXA_RANKS = ["Domain", "Realm", "Kingdom", "Phylum", "Subphylum", "Clas
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Compare novel genome architecture to ICTV genome architectures with similar classifications.")
 
-    parser.add_argument("-p", "--prediction-table", help="")
-    parser.add_argument("-g", "--gff-file", help="")
-    parser.add_argument("-c", "--contig-fams", help="")
-    parser.add_argument("-m", "--magnitude-table", help="")
-    parser.add_argument("-d", "--distance-table", help="")
-    parser.add_argument("-t", "--taxa-fam-sets", help="")
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("-p", "--prediction-table", help="final summary report output from parse_hmmscan_table.py")
+    parser.add_argument("-g", "--gff-file", help="gff file for input sequences")
+    parser.add_argument("-c", "--contig-fams", help="contig fams output from parse_hmmscan_table.py")
+    parser.add_argument("-m", "--magnitude-table", help="magnitudes output from get_ref_seqs_architecture-ICTV.py")
+    parser.add_argument("-d", "--distance-table", help="raw structure similarity output from get_ref_seqs_architecture-ICTV.py")
+    parser.add_argument("-t", "--taxa-fam-sets", help="taxa fams from get_ref_seqs_architecture-ICTV.py")
+    parser.add_argument("-o", "--outdir", help="Output directory")
     
     args = parser.parse_args()
     args_pass = True

@@ -12,7 +12,7 @@ from Bio import SeqIO
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Combine pulled genbank sequences into single files.")
 
     parser.add_argument("-g", "--genomes-dir", help="genome sequences dir")
     parser.add_argument("-o", "--outdir", help="output")

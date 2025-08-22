@@ -32,14 +32,14 @@ METHODS = ["lca", "majority", "best-hit"]
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Parse novel hmmscan output and viral_fams tables to assign taxonomic and host info to contigs.")
 
-    parser.add_argument("-i", "--domain-table", help="")
-    parser.add_argument("-l1", "--lin-thresh-table", help="")
-    parser.add_argument("-l2", "--lin-host-table", help="")
+    parser.add_argument("-i", "--domain-table", help="domtblout output from hmmscan/hmmsearch")
+    parser.add_argument("-l1", "--lin-thresh-table", help="output from get_vFAM_lineage_marker_thresh.py using the same HMM db")
+    parser.add_argument("-l2", "--lin-host-table", help="output from get_vFAM_lineage_and_host_range.py using the same HMM db")
     parser.add_argument("-t", "--hmmer-type", default="hmmscan", help="Options: hmmscan, hmmsearch")
-    parser.add_argument("-f", "--fasta", help="")
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("-f", "--fasta", help="faa file used as input from hmmsearch")
+    parser.add_argument("-o", "--outdir", help="Directory to output files")
     
     args = parser.parse_args()
     args_pass = True

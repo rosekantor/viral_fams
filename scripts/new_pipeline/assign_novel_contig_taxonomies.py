@@ -15,14 +15,14 @@ import matplotlib.pyplot as plt
 # getargs()
 #
 def getargs():
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Parse novel hmmscan output and VOGDB tables to assign taxonomic and host info to contigs.")
 
-    parser.add_argument("-i", "--domain-table", help="")
+    parser.add_argument("-i", "--domain-table", help="domtblout output from hmmscan/hmmsearch")
     parser.add_argument("-m", "--hmmer-method", default="hmmscan", help="Options: hmmscan, hmmsearch")
-    parser.add_argument("-c", "--tc-map", help="")
-    parser.add_argument("-t", "--fam-tax-map", help="")
-    parser.add_argument("-s", "--fam-host-file", help="")
-    parser.add_argument("-o", "--outdir", help="")
+    parser.add_argument("-c", "--tc-map", help="trusted cutoffs from determine_tc.py")
+    parser.add_argument("-t", "--fam-tax-map", help="LCA of each fam from VOGDB")
+    parser.add_argument("-s", "--fam-host-file", help="Host information for each fam from determine_fam_hosts.py")
+    parser.add_argument("-o", "--outdir", help="Output directory")
     
     args = parser.parse_args()
     args_pass = True
