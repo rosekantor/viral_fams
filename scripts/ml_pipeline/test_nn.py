@@ -38,7 +38,7 @@ class MultiOutputMLPClassifier:
 
     def to_pickle(self, filepath):
         with open(filepath, 'wb') as file:
-            pickle.dump(self._classifiers, file)
+            pickle.dump(self, file)
 
 def from_pickle(filepath):
     with open(filepath, 'rb') as file:
@@ -126,12 +126,12 @@ def decode_predictions(y_pred, all_rank_decodings):
     return y_pred_decoded
 
 
-def test_model_accuracy(clf_list, all_rank_decodings, genes, X_test, y_test):
+def test_model_accuracy(clf, all_rank_decodings, genes, X_test, y_test):
     rank_accuracies = dict()
     predicted_data = list()
 
-    # y_pred = clf.predict(X_test)
-    y_pred = np.column_stack([clf.predict(X_test) for clf in clf_list])
+    y_pred = clf.predict(X_test)
+    # y_pred = np.column_stack([clf.predict(X_test) for clf in clf_list])
 
     for i, rank in enumerate(ORDERED_TAXA_RANKS):
         test_col_arr = y_test[:, i]
@@ -178,7 +178,7 @@ def main():
     y_columns = ORDERED_TAXA_RANKS
     # classes = [np.array(list(all_rank_decodings[rank].keys())) for rank in ORDERED_TAXA_RANKS]
 
-    clf_list = from_pickle(args.model)
+    clf = from_pickle(args.model)
 
     rank_accuracies = {rank: 0 for rank in ORDERED_TAXA_RANKS}
     predictions = list()
@@ -191,7 +191,7 @@ def main():
 
         print(f"Testing chunk {i+1}...")
 
-        chunk_rank_accuracies, chunk_predictions = test_model_accuracy(clf_list, all_rank_decodings, genes, X, y)
+        chunk_rank_accuracies, chunk_predictions = test_model_accuracy(clf, all_rank_decodings, genes, X, y)
 
         for rank in ORDERED_TAXA_RANKS:
             rank_accuracies[rank] += chunk_rank_accuracies[rank]
